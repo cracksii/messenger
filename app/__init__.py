@@ -7,6 +7,8 @@ __app__ = "my favourite message app"
 class TableType(enum.Enum):
     CLIENT = "clients",
     PARTY = "parties"
+    PARTY_SUFFIX = "_parties"
+    MEMBER_SUFFIX = "_members"
 
     def __str__(self):
         return self.value[0]

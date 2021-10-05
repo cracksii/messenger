@@ -12,4 +12,6 @@ class Message:
         self.__dict__.update(data)  # Set values
 
     def to_json(self):
-        return str(self.__dict__)
+        var = self.__dict__
+        var["author"] = self.author.client_id
+        return str(var)

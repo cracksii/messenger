@@ -10,7 +10,6 @@ from .client import Client
 class App:
     db = MySQLDatabase
     clients: List[Client] = []
-    parties = []
 
     @staticmethod
     def run(host: Tuple[str, int]):

@@ -1,5 +1,7 @@
 import enum
 import typing
+import time
+import hashlib
 
 from . import __app__ as app_name, TableType as Tables
 
@@ -22,9 +24,8 @@ class Client:
                  client_id: int = 0,
                  username: str = "None",
                  key: str = "None",
-                 party_table: str = "None",
-                 creation_date: str = "None",
-                 last_seen: str = "None",
+                 creation_date: str = time.strftime("%d.%m.%Y"),
+                 last_seen: str = time.strftime("%d.%m.%Y %H:%M:%S"),
                  status: str = f"I am new to {app_name}",
                  image: str = "None",
                  network_client: NetworkClient = None,
@@ -32,8 +33,7 @@ class Client:
         self.in_database = in_db
         self.client_id = client_id
         self.username = username
-        self.key = key
-        self.parties = party_table  # name of the table containing the party ids
+        self.key = hashlib.sha256(key.encode()).hexdigest() if len(key) != 64 else key
         self.creation_date = creation_date
         self.last_seen = last_seen
         self.status = status
@@ -42,7 +42,7 @@ class Client:
         self.network_client = network_client
 
     def __str__(self):
-        return str(vars(self))
+        return f"('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
 
     def __repr__(self):
         return f"('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
@@ -52,13 +52,19 @@ class Client:
         return Client(15, "SampleNickname", "abcdefghijklmnopqrstuvwxyz123", "12.05.2020", "13.08.2021,23:20:10", "Holy Hasel", "C:/files/image123.png")
 
     @staticmethod
-    def to_sql_query(query_type: QueryType, class_=None, **kwargs):
+    def to_sql_query(query_type: QueryType, class_=None, db=None, **kwargs):
         if query_type == QueryType.INSERT:
+            if not db:
+                from .application import App
+                db = App.db
             if not class_:
                 raise Exception("No client instance given")
 
             class_.in_database = True
-            return "AddClient", f"{class_.username}", f"{class_.key}", f"{class_.status}", f"{class_.image}"
+            q1 = f"insert into {Tables.CLIENT} (username, private_key, creation_date, last_seen, status, image) values ({str([_ for _ in vars(class_).values()][2:-2])[1:-1]})"
+            ai = db.query(f"select auto_increment from information_schema.tables WHERE table_name='{Tables.CLIENT}'")[0][0]
+            q2 = f"create table {ai if ai else 1}_parties (id int primary key auto_increment, party_id int)"
+            return q1, q2, ai if ai else 1
 
         elif query_type == QueryType.SELECT:
             if "where" in kwargs.keys():
@@ -83,7 +89,7 @@ class Client:
 
     @staticmethod
     def from_sql_query(query: typing.Tuple):
-        return Client(query[0], query[1], query[2], query[3], query[4], query[5], query[6], query[7], in_db=True)
+        return Client(query[0], query[1], query[2], query[3], query[4], query[5], query[6], in_db=True)
 
     @staticmethod
     def from_network_client(network_client: NetworkClient):
@@ -92,6 +98,7 @@ class Client:
             if client.network_client == network_client:
                 return client
         return None
+
 
 # creation_date:    dd.mm.yyyy
 # last_seen:        dd.mm.yyyy hh:mm:ss

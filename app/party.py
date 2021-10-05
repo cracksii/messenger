@@ -17,7 +17,7 @@ class Party:
                  name: str = "",
                  owner: int = 0,
                  description: str = "",
-                 members: List[Client] = None,
+                 members: List[int] = None,
                  messages: List[Message] = None,
                  member_count: int = 0,
                  image: str = "",
@@ -35,21 +35,29 @@ class Party:
         self.admins = [] if not admins else admins  # The uids of admins (users who can change settings in the party)
 
     @staticmethod
-    def from_sql_query(query):
-        return Party(*query[:-2])
+    def from_sql_query(query, members):
+        return Party(*query[:-2], members=members)
 
     @staticmethod
     def get(destination: str):
         from .application import App
         party = App.db.utility.get_party(destination)
-        log(party.__dict__, LogLevel.EXT_DEBUG)
-        return party
+        if party:
+            return party
+        return None
 
     def send(self, message: Message):
-        log(f"Members: {self.members}", LogLevel.EXT_DEBUG)
+        from . import App
         for member in self.members:
-            if member.client_id != message.author.client_id:
-                member.network_client.send(message.to_json(), ClientHandlerId.MESSAGE_SEND)
+            if member != message.author.client_id:
+                for c in App.clients:
+                    if c.client_id == member:
+                        log(f"Sending message to {c.client_id}", LogLevel.DEBUG, c.network_client)
+                        c.network_client.send(message.to_json(), ClientHandlerId.MESSAGE_SEND)
+                        break
+
+    def __repr__(self):
+        return f"Party: ({self.party_id},{[_ for _ in self.members]}, {self.owner})"
 
 
 r"""

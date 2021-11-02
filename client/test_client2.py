@@ -1,5 +1,6 @@
 import socket
 import time
+import json
 
 
 def send(data, mid):
@@ -42,10 +43,9 @@ id = int(sock.recv(64))
 body = sock.recv(length)
 print(f"{length} {id} {body}")
 
-length = int(sock.recv(64))
-id = int(sock.recv(64))
-body = sock.recv(length)
-print(f"{length} {id} {body}")
-
-
-time.sleep(1000)
+while True:
+    length = int(sock.recv(64))
+    id = int(sock.recv(64))
+    body = sock.recv(length)
+    print(f"{length} {id} {body}")
+    print(json.loads(body)["content"])

@@ -3,7 +3,6 @@ import json
 import colorama
 import hashlib
 
-import app
 from server.logger import log, LogLevel
 from server import BaseRequestHandler, Request
 
@@ -14,9 +13,10 @@ from .client import Client
 
 
 class ServerHandlerId(enum.IntEnum):  # Messages send from the client to server are identified with this id
-    FIRST_CONNECTION = 0,
-    LOGIN = 1,
+    FIRST_CONNECTION = 0
+    LOGIN = 1
     MESSAGE_SEND = 2
+    LOAD_MESSAGES = 3
 
 
 def parse_json(js):
@@ -30,7 +30,7 @@ def parse_json(js):
 class FirstConnectionHandler(BaseRequestHandler):
     @staticmethod
     def handle(request: Request):
-        log(f"Connected", LogLevel.DEBUG, request.client, colorama.Fore.GREEN)
+        log(f"Connected", LogLevel.DEBUG, request.client)
         request.client.send("", ClientHandlerId.FIRST_CONNECTION)
 
 
@@ -45,7 +45,9 @@ class LogInHandler(BaseRequestHandler):
             log(f"Username: '{name}', Key: '{key}'", LogLevel.EXT_DEBUG, request.client)
             client = db.get_client(username=data["username"])
             if not client:
-                log(f"{request.client.address[0]}: No database entry found for username '{name}'", LogLevel.ERROR)
+                log(f"No database entry found for username '{name}'", LogLevel.ERROR, client=request.client)
+            elif client.is_connected():
+                log(f"Is already connected", LogLevel.WARNING, client=request.client)
             else:
                 client.network_client = request.client
                 if client.key == key:
@@ -58,6 +60,7 @@ class LogInHandler(BaseRequestHandler):
         else:
             log(f"Send incorrect data: '{request.data}'", LogLevel.DEBUG, request.client)
         request.client.send("0", ClientHandlerId.LOGIN)
+        request.client.close(False)
 
 
 class MessageSendHandler(BaseRequestHandler):
@@ -74,9 +77,28 @@ class MessageSendHandler(BaseRequestHandler):
             if party:
                 log(party, LogLevel.EXT_DEBUG)
                 party.send(msg)
-                request.client.send("0", ClientHandlerId.MESSAGE_SEND)
+                request.client.send("1", ClientHandlerId.MESSAGE_SEND)
             else:
                 log(f"Party {msg.destination} wasn't found", LogLevel.WARNING, request.client)
         else:
             log("Send message without login", LogLevel.WARNING, request.client)
-            request.client.send("1", ClientHandlerId.MESSAGE_SEND)
+            request.client.send("0", ClientHandlerId.MESSAGE_SEND)
+
+
+class MessageLoadHandler(BaseRequestHandler):
+    """
+    Gets all messages the client didn't receive from the database and sends them back
+    """
+    @staticmethod
+    def handle(request: Request):
+        from . import App
+        client = Client.from_network_client(request.client)
+        if client:
+            data: dict = json.loads(request.data)
+            parties = App.db.utility.get_all_parties(client.client_id)
+            for party in parties:
+                messages = party.get_messages_since(data[party.party_id])
+                for msg in messages:
+                    party.send(msg)
+        else:
+            log("Client wasn't found", LogLevel.ERROR)

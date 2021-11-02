@@ -7,11 +7,11 @@ import time
 from server import LogLevel, log
 
 try:
-    from . import TableType
+    from . import TableType, Message
     from .client import Client, QueryType
     from .party import Party
 except ImportError:
-    from app import TableType
+    from app import TableType, Message
     from app.client import Client, QueryType
     from app.party import Party
 
@@ -84,7 +84,23 @@ class DatabaseUtility:
         return self._db.callproc(query[0], query[1:])
 
     def reset(self):
-        self._db.callproc("Reset", ())
+        tables = [_[0] for _ in self._db.query("show tables")]
+        for table in tables:
+            self._db.query(f"drop table {table}")
+        self._db.query("""create table clients(
+                            client_id int primary key auto_increment,
+                            username varchar(50) not null,
+                            private_key varchar(64) not null,
+                            creation_date char(10) not null,
+                            last_seen char(19) not null,
+                            status varchar(250) not null,
+                            image varchar(500) not null)""")
+        self._db.query("""create table parties(
+                            party_id int primary key auto_increment,
+                            name varchar(50) not null,
+                            owner int not null,
+                            description varchar(250) not null,
+                            creation_date char(10) not null)""")
         time.sleep(1)
 
     def get_client(self, **kwargs):
@@ -122,19 +138,19 @@ class DatabaseUtility:
         self._db.query(f"insert into {TableType.PARTY.value} (name, owner, description, creation_date) values('{name}', '{owner}', '{description}', '{time.strftime('%d.%m.%Y')}')")
         party_id = self._db.query(f"select party_id from {TableType.PARTY.value} where name='{name}' and owner='{owner}' and description='{description}'")[0][0]
         self._db.query(f"create table {party_id}{TableType.MEMBER_SUFFIX.value} (id int primary key auto_increment, client_id int)")
+        self._db.query(f"create table {party_id}{TableType.MESSAGE_SUFFIX.value} (id int primary key auto_increment, content text, author int, timestamp char(19))")
 
         if owner not in members:
             members.insert(0, owner)
 
         for member in members:
-            self.add_to_party(party_id, self.get_client(client_id=member))
+            self.add_to_party(party_id, member)
 
         log(f"Created party {party_id} name: '{name}' owner: '{owner}' members: {members}")
 
     def add_to_party(self, party_id: int, client: int):
-        if client:
-            self._db.query(f"insert into {client}{TableType.PARTY_SUFFIX.value} (party_id) values ({party_id})")
-            self._db.query(f"insert into {party_id}{TableType.MEMBER_SUFFIX.value} (client_id) values ({client})")
+        self._db.query(f"insert into {client}{TableType.PARTY_SUFFIX.value} (party_id) values ({party_id})")
+        self._db.query(f"insert into {party_id}{TableType.MEMBER_SUFFIX.value} (client_id) values ({client})")
 
     def get_party(self, party_id: int):
         result = self._db.query(f"select * from {TableType.PARTY.value} where party_id={party_id}")
@@ -143,12 +159,36 @@ class DatabaseUtility:
             return None
         return Party.from_sql_query(result[0], members)
 
+    def get_all_party_ids(self, client_id: int):
+        result = self._db.query(f"select party_id from {client_id}{TableType.PARTY_SUFFIX.value}")
+        if len(result) != 0:
+            return [_[0] for _ in result]
+        return []
 
-if __name__ == '__main__':
-    db = MySQLDatabase(database="db", host="localhost", user="admin", password="5r4gXDwSfnxc9Wez", log_file=r"../database/log.sql")
-    # db.utility.reset()
+    def get_all_parties(self, client_id: int):
+        ids = self.get_all_party_ids(client_id)
+        parties = []
+        for id in ids:
+            parties.append(self.get_party(id))
+        return parties
+
+    def add_message(self, message: Message, party_id: int):
+        self._db.query(f"insert into {party_id}{TableType.MESSAGE_SUFFIX.value} (content, author, timestamp) values (\"{message.content}\", {message.author.client_id}, \"{time.strftime('%d.%m.%Y %H:%M:%S')}\")")
+
+
+def fun1():
+    db.utility.reset()
+    db.utility.add_client("TestUser", "TestKey", "online like a boss", "image.png")
     db.utility.add_client("Other User", "TestKey", "online like a boss", "image.png")
+
+    db.utility.add_party("TestParty", "No desc", 1, [1])
+    db.utility.add_party("Second Party", "Long desc", 2, [1, 2])
     db.utility.add_to_party(1, 2)
-    # db.utility.add_party("TestParty", "No desc", 1, [1])
     db.print("clients")
     db.print("parties")
+
+
+if __name__ == '__main__':
+    db = MySQLDatabase(database="db", host="localhost", user="admin", password="5r4gXDwSfnxc9Wez",
+                       log_file=r"../database/log.sql")
+    fun1()

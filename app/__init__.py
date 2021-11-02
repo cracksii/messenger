@@ -9,6 +9,7 @@ class TableType(enum.Enum):
     PARTY = "parties"
     PARTY_SUFFIX = "_parties"
     MEMBER_SUFFIX = "_members"
+    MESSAGE_SUFFIX = "_messages"
 
     def __str__(self):
         return self.value[0]

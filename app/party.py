@@ -40,7 +40,7 @@ class Party:
 
     @staticmethod
     def get(destination: str):
-        from .application import App
+        from . import App
         party = App.db.utility.get_party(destination)
         if party:
             return party
@@ -48,17 +48,31 @@ class Party:
 
     def send(self, message: Message):
         from . import App
+        App.db.utility.add_message(message, self.party_id)
         for member in self.members:
             if member != message.author.client_id:
                 for c in App.clients:
                     if c.client_id == member:
+                        log(message.prepare(), LogLevel.EXT_DEBUG)
                         log(f"Sending message to {c.client_id}", LogLevel.DEBUG, c.network_client)
-                        c.network_client.send(message.to_json(), ClientHandlerId.MESSAGE_SEND)
+                        c.network_client.send(message.prepare(), ClientHandlerId.MESSAGE_SEND)
                         break
 
     def __repr__(self):
-        return f"Party: ({self.party_id},{[_ for _ in self.members]}, {self.owner})"
+        return f"Party: ({self.party_id}, {[_ for _ in self.members]}, {self.owner})"
 
+    def get_messages_since(self, last_id: int) -> List[Message]:
+        from . import App, TableType
+        result = App.db.query(f"select * from {self.party_id}{TableType.MESSAGE_SUFFIX} where id > {last_id}")
+        messages = []
+        for msg in result:
+            msg = Message({})
+            msg.content = result[1]
+            msg.author = result[2]
+            msg.timestamp = result[3]
+            messages.append(msg)
+        print(messages)
+        return messages
 
 r"""
   ⋀

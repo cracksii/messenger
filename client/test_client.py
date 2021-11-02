@@ -37,17 +37,8 @@ print(f"{length} {id} {body}")
 
 send('{"username":"TestUser", "key":"TestKey"}', 1)
 
-length = int(sock.recv(64))
-id = int(sock.recv(64))
-body = sock.recv(length)
-print(f"{length} {id} {body}")
-
-send('{"content":"Hi Annie.\\nI will be back soon.\\nDon\'t worry", "destination":1}', 2)
-
-length = int(sock.recv(64))
-id = int(sock.recv(64))
-body = sock.recv(length)
-print(f"{length} {id} {body}")
-
-
-time.sleep(1000)
+while True:
+    length = int(sock.recv(64))
+    id = int(sock.recv(64))
+    body = sock.recv(length)
+    print(f"{length} {id} {body}")

@@ -85,10 +85,26 @@ create procedure DeleteAllParties()
     
 create procedure Reset()
 	begin
-		call DeleteAllClients();
-        call DeleteAllParties();
-		call CreateClientsTable();
-        call CreatePartiesTable();
+		drop database db;
+        create database db;
+        create table clients
+		(
+			client_id int primary key auto_increment,
+			username varchar(50) not null,     		
+			private_key varchar(64) not null,	
+			creation_date char(10) not null,
+			last_seen char(19) not null,
+			status varchar(100) not null,
+			image varchar(500) not null
+		);
+        create table parties
+		(
+			party_id int primary key auto_increment,
+            name varchar(50) not null,
+			owner int not null,
+            description varchar(150) not null,
+            creation_date char(10) not null
+		);
 	end$$
 DELIMITER ;
 

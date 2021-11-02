@@ -42,17 +42,28 @@ class Client:
         self.network_client = network_client
 
     def __str__(self):
-        return f"('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
+        return f"Client: ('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
 
     def __repr__(self):
-        return f"('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
+        return f"Client: ('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
 
     @staticmethod
     def sample_client():
-        return Client(15, "SampleNickname", "abcdefghijklmnopqrstuvwxyz123", "12.05.2020", "13.08.2021,23:20:10", "Holy Hasel", "C:/files/image123.png")
+        """
+        :return: A client with sample values
+        """
+        return Client(15, "SampleNickname", "somecoolkey", "12.05.2020", "13.08.2021 23:20:10", "Holy Hasel", "C:/files/image123.png")
 
     @staticmethod
     def to_sql_query(query_type: QueryType, class_=None, db=None, **kwargs):
+        """
+        Converts client to a sql query
+        :param query_type: Type of the query
+        :param class_: Instance if the query type is insert
+        :param db: Database to use
+        :param kwargs: Where clauses
+        :return: The sql query
+        """
         if query_type == QueryType.INSERT:
             if not db:
                 from .application import App
@@ -89,15 +100,32 @@ class Client:
 
     @staticmethod
     def from_sql_query(query: typing.Tuple):
+        """
+        Returns a new Client instance from a query result
+        :param query: The query result
+        :return: A new Client instance
+        """
         return Client(query[0], query[1], query[2], query[3], query[4], query[5], query[6], in_db=True)
 
     @staticmethod
     def from_network_client(network_client: NetworkClient):
+        """
+        Gets an instance from a NetworkClient connected to the server
+        :param network_client: The NetworkClient
+        :return: The ApplicationClient instance
+        """
         from .application import App
         for client in App.clients:
             if client.network_client == network_client:
                 return client
         return None
+
+    def is_connected(self) -> bool:
+        from . import App
+        for client in App.clients:
+            if client.client_id == self.client_id:
+                return True
+        return False
 
 
 # creation_date:    dd.mm.yyyy

@@ -18,4 +18,6 @@ class App:
             NetworkClient.add_handler(ServerHandlerId.FIRST_CONNECTION, FirstConnectionHandler)
             NetworkClient.add_handler(ServerHandlerId.LOGIN, LogInHandler)
             NetworkClient.add_handler(ServerHandlerId.MESSAGE_SEND, MessageSendHandler)
+            NetworkClient.add_handler(ServerHandlerId.LOAD_MESSAGES, MessageLoadHandler)
             tcp.start()
+

@@ -50,6 +50,7 @@ class BaseClient:
 
 class Client(BaseClient):
     request_handler = {}
+    show_disconnection_message = True
 
     def __init__(self, socket: s.socket, address: typing.Tuple[str, int], server: Server, manual_handle=False):
         super().__init__(socket, address, server, manual_handle)
@@ -89,24 +90,29 @@ class Client(BaseClient):
                                     break
                             break
                 else:
-                    log(f"Disconnected unexpected", LogLevel.WARNING, self)
+                    log(f"Lost connection", LogLevel.WARNING, self)
                     return
             except s.timeout:
                 pass
             except (OSError, ConnectionResetError):
                 if not self.closed:
-                    log(f"Disconnected unexpected", LogLevel.WARNING, self)
+                    log(f"Lost connection", LogLevel.WARNING, self)
                     return    
                 else:
                     break
             except ValueError:
                 log(f"ValueError occurred on client {self.address[0]}", LogLevel.ERROR)
                 break
-            except Exception as ex:
+            except:
                 exception = str(traceback.format_exc())
                 log(f"Exception occurred on client {self.address[0]}: \"{exception}\"", LogLevel.ERROR)
                 break
-        log(f"Disconnected", clr=colorama.Fore.RED, client=self)
+        if self.show_disconnection_message:
+            log(f"Disconnected", clr=colorama.Fore.RED, client=self)
+
+    def close(self, show_message: bool = True):
+        self.show_disconnection_message = show_message
+        super().close()
 
     @classmethod
     def add_handler(cls, request_id: enum.IntEnum, handler):

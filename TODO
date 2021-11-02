@@ -1,0 +1,2 @@
+Add last received message column to 1_parties, 2_parties. On connection the client will check its last received message
+and will fetch all not received messages.

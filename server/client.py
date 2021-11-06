@@ -45,7 +45,7 @@ class BaseClient:
         return
 
     def __repr__(self):
-        return f"NetworkClient from '{self.address[0]}', Status: '{'closed' if self.closed  else 'open'}'"
+        return f"<NetworkClient {'{'}ip: '{self.address[0]}', status: '{'closed' if self.closed  else 'open'}'{'}'}>"
 
 
 class Client(BaseClient):
@@ -56,13 +56,10 @@ class Client(BaseClient):
         super().__init__(socket, address, server, manual_handle)
         self._socket.settimeout(2)
 
-    def send(self, data: str, request_id=None, header_length=64):
-        # print(f"{data} {request_id} {header_length}")
-        length = Server.expand(str(len(data)).encode(), header_length)
-        self._socket.send(length)
-        if request_id is not None:
-            self._socket.send(Server.expand(str(request_id.value).encode(), header_length))
-        self._socket.send(data.encode())
+    def send(self, data: str, request_id=None):
+        msg = "" if request_id is None else str(request_id.value) + "|"
+        # log(f"{data} {request_id.value} '{msg + data}'", LogLevel.EXT_DEBUG)
+        self._socket.send((msg + data).encode())
 
     def listen(self):
         while not self.closed:
@@ -81,31 +78,38 @@ class Client(BaseClient):
                                 if data:
                                     data = data.decode()
                                     request = Request(length, id, data, self, self.server)
-                                    # print(self.server.server_request_ids)
-                                    # print(isinstance(self.server.server_request_ids, enum.IntEnum))
+                                    # print(self.server.server_request_ids, id)
+                                    # print(self.request_handler)
                                     try:
-                                        self.request_handler[self.server.server_request_ids(id)].handle(request)
+                                        request_handler = self.request_handler[self.server.server_request_ids(id)]
                                     except KeyError:
                                         log(f"No handler found for id: '{id}'", LogLevel.ERROR, self)
+                                        break
+                                    try:
+                                        request_handler.handle(request)
+                                    except:
+                                        exception = str(traceback.format_exc()).split("\n", 1)[1]
+                                        log(f"Exception occured on client '{self.address[0]}' in request_handler '{self.server.server_request_ids(id).name}':\n{exception}", LogLevel.ERROR)
+
                                     break
                             break
                 else:
                     log(f"Lost connection", LogLevel.WARNING, self)
+                    self.closed = True
                     return
             except s.timeout:
                 pass
             except (OSError, ConnectionResetError):
                 if not self.closed:
                     log(f"Lost connection", LogLevel.WARNING, self)
+                    self.closed = True
                     return    
                 else:
                     break
-            except ValueError:
-                log(f"ValueError occurred on client {self.address[0]}", LogLevel.ERROR)
-                break
             except:
                 exception = str(traceback.format_exc())
-                log(f"Exception occurred on client {self.address[0]}: \"{exception}\"", LogLevel.ERROR)
+                log(f"Exception occurred on client {self.address[0]}: {exception}", LogLevel.ERROR)
+                self.closed = True
                 break
         if self.show_disconnection_message:
             log(f"Disconnected", clr=colorama.Fore.RED, client=self)

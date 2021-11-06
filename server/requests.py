@@ -1,13 +1,4 @@
 import abc
-import enum
-
-
-class ServerRequestId(enum.IntEnum):
-    FIRST_CONNECTION = 0
-
-
-class ClientRequestId(enum.IntEnum):
-    FIRST_CONNECTION = 0
 
 
 class Request:
@@ -18,6 +9,12 @@ class Request:
 
         self.client = client
         self.server = server
+
+    def __str__(self):
+        return f"<Request {'{'}id: {self.id}, data: {self.data}, client: {self.client}{'}'})>"
+
+    def __repr__(self):
+        return str(self)
 
 
 class BaseRequestHandler:

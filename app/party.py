@@ -47,8 +47,9 @@ class Party:
         return None
 
     def send(self, message: Message):
-        from . import App
+        from . import App, TableType
         App.db.utility.add_message(message, self.party_id)
+        message.id = App.db.query(f"select auto_increment from information_schema.tables WHERE table_name='{self.party_id}{TableType.MESSAGE_SUFFIX}'")[0][0]
         for member in self.members:
             if member != message.author.client_id:
                 for c in App.clients:
@@ -65,13 +66,17 @@ class Party:
         from . import App, TableType
         result = App.db.query(f"select * from {self.party_id}{TableType.MESSAGE_SUFFIX} where id > {last_id}")
         messages = []
-        for msg in result:
+        # log(result, LogLevel.EXT_DEBUG)
+        for res in result:
             msg = Message({})
-            msg.content = result[1]
-            msg.author = result[2]
-            msg.timestamp = result[3]
+            msg.id = res[0]
+            msg.content = res[1]
+            msg.author = res[2]
+            msg.timestamp = res[3]
+            msg.destination = self.party_id
             messages.append(msg)
-        print(messages)
+
+        # log(messages, LogLevel.EXT_DEBUG)
         return messages
 
 r"""

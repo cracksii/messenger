@@ -165,7 +165,7 @@ class DatabaseUtility:
             return [_[0] for _ in result]
         return []
 
-    def get_all_parties(self, client_id: int):
+    def get_all_parties(self, client_id: int) -> typing.List[Party]:
         ids = self.get_all_party_ids(client_id)
         parties = []
         for id in ids:

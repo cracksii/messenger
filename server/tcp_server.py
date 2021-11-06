@@ -3,11 +3,10 @@ import time
 import threading
 
 from .logger import *
-from .requests import ServerRequestId
 
 
 class Server:
-    def __init__(self, address, client, server_request_ids=ServerRequestId, log_lvl: DebugLevel = DebugLevel.NO_DEBUGGING):
+    def __init__(self, address, client, server_request_ids: type(enum.IntEnum), log_lvl: DebugLevel = DebugLevel.NO_DEBUGGING):
         self.address = address
         self.ip = address[0]
         self.port = address[1]

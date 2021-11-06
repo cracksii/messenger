@@ -19,5 +19,6 @@ class App:
             NetworkClient.add_handler(ServerHandlerId.LOGIN, LogInHandler)
             NetworkClient.add_handler(ServerHandlerId.MESSAGE_SEND, MessageSendHandler)
             NetworkClient.add_handler(ServerHandlerId.LOAD_MESSAGES, MessageLoadHandler)
+            NetworkClient.add_handler(ServerHandlerId.GET_PROPERTY, PropertyGetHandler)
             tcp.start()
 

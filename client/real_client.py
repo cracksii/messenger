@@ -64,9 +64,9 @@ if password == "":
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(("127.0.0.1", 5000))
 send(str({"username": username, "key": password}).replace("'", '"'), 1)
-Thread(target=recv).start()
+Thread(target=listen).start()
 
-# send('[3, 5, 8]', 3)
+send('{"1": 3, "2": 3}', 3)
 
 while True:
     time.sleep(0.5)

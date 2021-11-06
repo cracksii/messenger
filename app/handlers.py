@@ -2,6 +2,7 @@ import enum
 import json
 import colorama
 import hashlib
+from typing import List
 
 from server.logger import log, LogLevel
 from server import BaseRequestHandler, Request
@@ -16,7 +17,8 @@ class ServerHandlerId(enum.IntEnum):  # Messages send from the client to server 
     FIRST_CONNECTION = 0
     LOGIN = 1
     MESSAGE_SEND = 2
-    LOAD_MESSAGES = 3
+    LOAD_MESSAGES = 3,
+    GET_PROPERTY = 4
 
 
 def parse_json(js):
@@ -31,7 +33,7 @@ class FirstConnectionHandler(BaseRequestHandler):
     @staticmethod
     def handle(request: Request):
         log(f"Connected", LogLevel.DEBUG, request.client)
-        request.client.send("", ClientHandlerId.FIRST_CONNECTION)
+        request.client.send("1", ClientHandlerId.FIRST_CONNECTION)
 
 
 class LogInHandler(BaseRequestHandler):
@@ -79,9 +81,9 @@ class MessageSendHandler(BaseRequestHandler):
                 party.send(msg)
                 request.client.send("1", ClientHandlerId.MESSAGE_SEND)
             else:
-                log(f"Party {msg.destination} wasn't found", LogLevel.WARNING, request.client)
+                log(f"Party {msg.destination} wasn't found", LogLevel.ERROR, request.client)
         else:
-            log("Send message without login", LogLevel.WARNING, request.client)
+            # log("Send message without login", LogLevel.WARNING, request.client)
             request.client.send("0", ClientHandlerId.MESSAGE_SEND)
 
 
@@ -95,10 +97,34 @@ class MessageLoadHandler(BaseRequestHandler):
         client = Client.from_network_client(request.client)
         if client:
             data: dict = json.loads(request.data)
-            parties = App.db.utility.get_all_parties(client.client_id)
+            parties: List[Party] = App.db.utility.get_all_parties(client.client_id)
+            # log(data, LogLevel.EXT_DEBUG)
             for party in parties:
-                messages = party.get_messages_since(data[party.party_id])
+                messages = party.get_messages_since(data[str(party.party_id)])
                 for msg in messages:
-                    party.send(msg)
+                    request.client.send(msg.to_json(), ClientHandlerId.MESSAGE_SEND)
         else:
             log("Client wasn't found", LogLevel.ERROR)
+            request.client.send("0", ClientHandlerId.LOAD_MESSAGES)
+
+
+class PropertyGetHandler(BaseRequestHandler):
+
+    @staticmethod
+    def handle(request: Request):
+        log(request, LogLevel.DEBUG)
+        client = Client.from_network_client(request.client)
+        if client:
+            prop = parse_json(request.data)
+            if "property" in prop:
+                prop = prop["property"]
+                log("Prop is " + prop, LogLevel.EXT_DEBUG)
+
+        else:
+            request.client.send("0", ClientHandlerId.GET_PROPERTY)
+
+
+# Answering on a request with 1 if the communication is request -> response like. That way we can show if the request
+# succeeded or not. If the response is not true or false we don't respond with a status code
+
+# receiving a 1 usually means everything is fine, while receiving a 0 means the operation couldn't finished as planned

@@ -48,13 +48,6 @@ class Client:
         return f"Client: ('{self.client_id}', '{self.network_client.address[0]}', '{'closed' if self.network_client.closed else 'open'}')"
 
     @staticmethod
-    def sample_client():
-        """
-        :return: A client with sample values
-        """
-        return Client(15, "SampleNickname", "somecoolkey", "12.05.2020", "13.08.2021 23:20:10", "Holy Hasel", "C:/files/image123.png")
-
-    @staticmethod
     def to_sql_query(query_type: QueryType, class_=None, db=None, **kwargs):
         """
         Converts client to a sql query
@@ -122,9 +115,14 @@ class Client:
 
     def is_connected(self) -> bool:
         from . import App
-        for client in App.clients:
-            if client.client_id == self.client_id:
+        # print(self.client_id, [_.client_id for _ in App.clients], self.client_id in [_.client_id for _ in App.clients])
+        if self.client_id in [_.client_id for _ in App.clients]:
+            other_client = [_ for _ in App.clients if _.client_id == self.client_id][0]
+            # print(other_client.network_client)
+            if not other_client.network_client.closed:
                 return True
+            else:
+                App.clients.remove(other_client)
         return False
 
 

@@ -12,11 +12,13 @@ class Message:
         self.author: Optional[Client] = None
         self.destination: str = ""
         self.timestamp: str = ""
+        self.id: int = -1
         self.__dict__.update(data)  # Set values
 
     def to_json(self):
         vals = self.__dict__.copy()
-        vals.update({"author": self.author.client_id})
+        if isinstance(vals["author"], Client):
+            vals.update({"author": self.author.client_id})
         return json.dumps(vals)
 
     def prepare(self):

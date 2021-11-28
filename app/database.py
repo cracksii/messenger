@@ -3,6 +3,7 @@ import typing
 import colorama
 import mysql.connector
 import time
+import random
 
 from server import LogLevel, log
 
@@ -37,11 +38,6 @@ class MySQLDatabase:
         try:
             # print(sql)
             cursor = self._db.cursor(buffered=True)
-
-            with open(self.log_file, "a") as f:
-                f.write(f"{sql}{' ' * (99 - len(sql))}# {time.strftime('%Y.%m.%d %H:%M:%S')}\n")
-                f.close()
-
             cursor.execute(sql, multi=False)
             self._db.commit()
             return [_ for _ in cursor]
@@ -95,11 +91,12 @@ class DatabaseUtility:
                             last_seen char(19) not null,
                             status varchar(250) not null,
                             image varchar(500) not null)""")
-        self._db.query("""create table parties(
+        self._db.query(f"""create table parties(
                             party_id int primary key auto_increment,
                             name varchar(50) not null,
                             owner int not null,
                             description varchar(250) not null,
+                            image varchar(250) default 'https://t4.ftcdn.net/jpg/04/10/43/77/360_F_410437733_hdq4Q3QOH9uwh0mcqAhRFzOKfrCR24Ta.jpg',
                             creation_date char(10) not null)""")
         time.sleep(1)
 
@@ -134,8 +131,24 @@ class DatabaseUtility:
                 return
         except IndexError:
             pass
+        i = random.randint(0, 10)
+        if i > 5:
+            self._db.query(f"insert into {TableType.PARTY.value} (name, owner, description, creation_date) values("
+                           f"'{name}', "
+                           f"'{owner}', "
+                           f"'{description}', "
+                           f"'{time.strftime('%d.%m.%Y')}')")
+        else:
+            self._db.query(f"insert into {TableType.PARTY.value} (name, owner, description, creation_date, image) values("
+                           f"'{name}', "
+                           f"'{owner}', "
+                           f"'{description}', "
+                           f"'{time.strftime('%d.%m.%Y')}', "
+                           f"""'{random.choice([
+                                'https://i.pinimg.com/originals/38/d2/f3/38d2f3bed079b8c9b900ab04dd837b49.jpg',
+                                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmIqhKMfmuETR1o79MX8km-0A5KvMq2o0X3w&usqp=CAU',
+                                'https://www.booksie.com/files/profiles/18/yandere-writer.jpg'])}')""")
 
-        self._db.query(f"insert into {TableType.PARTY.value} (name, owner, description, creation_date) values('{name}', '{owner}', '{description}', '{time.strftime('%d.%m.%Y')}')")
         party_id = self._db.query(f"select party_id from {TableType.PARTY.value} where name='{name}' and owner='{owner}' and description='{description}'")[0][0]
         self._db.query(f"create table {party_id}{TableType.MEMBER_SUFFIX.value} (id int primary key auto_increment, client_id int)")
         self._db.query(f"create table {party_id}{TableType.MESSAGE_SUFFIX.value} (id int primary key auto_increment, content text, author int, timestamp char(19))")
@@ -180,10 +193,16 @@ def fun1():
     db.utility.reset()
     db.utility.add_client("TestUser", "TestKey", "online like a boss", "image.png")
     db.utility.add_client("Other User", "TestKey", "online like a boss", "image.png")
+    db.utility.add_client("Some cool user", "TestKey", "Not really online", "img.jpg")
+    db.utility.add_client("sickUser", "TestKey", "Slightly offling", "noimg.jpg")
 
-    db.utility.add_party("TestParty", "No desc", 1, [1])
-    db.utility.add_party("Second Party", "Long desc", 2, [1, 2])
+    db.utility.add_party("TestParty", "No desc", 1, [1, 3])
+    db.utility.add_party("Second Party", "Long desc", 2, [1, 2, 3, 4])
+    db.utility.add_party("Party 2", "Literally no desc", 2, [2, 3])
+    db.utility.add_party("Party 3", "Literally a desc", 3, [3, 4])
+    db.utility.add_party("Yandere Crew 4", "Literally some desc", 1, [1, 2, 3])
     db.utility.add_to_party(1, 2)
+    db.utility.add_to_party(5, 4)
     db.print("clients")
     db.print("parties")
 

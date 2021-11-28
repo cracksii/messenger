@@ -56,10 +56,10 @@ class Client(BaseClient):
         super().__init__(socket, address, server, manual_handle)
         self._socket.settimeout(2)
 
-    def send(self, data: str, request_id=None):
-        msg = "" if request_id is None else str(request_id.value) + "|"
+    def send(self, data, request_id=None):
+        msg = "" if request_id is None else str(request_id.value) + "\\/\\"
         # log(f"{data} {request_id.value} '{msg + data}'", LogLevel.EXT_DEBUG)
-        self._socket.send((msg + data).encode())
+        self._socket.send((msg + str(data) + "\\/\\/\\").encode())
 
     def listen(self):
         while not self.closed:

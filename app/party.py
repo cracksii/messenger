@@ -17,17 +17,16 @@ class Party:
                  name: str = "",
                  owner: int = 0,
                  description: str = "",
+                 image: str = "",
                  members: List[int] = None,
                  messages: List[Message] = None,
-                 member_count: int = 0,
-                 image: str = "",
                  settings: Dict[str, str] = None,
                  admins: List[Client] = None):
         self.party_id = party_id
         self.name = name
         self.members = [] if not members else members  # A list storing the members uids
         self.messages = [] if not messages else messages
-        self.member_count = member_count
+        self.member_count = len(members)
         self.owner = owner  # The uid of the owner
         self.image = image
         self.description = description
@@ -36,7 +35,7 @@ class Party:
 
     @staticmethod
     def from_sql_query(query, members):
-        return Party(*query[:-2], members=members)
+        return Party(*query[:-1], members=members)
 
     @staticmethod
     def get(destination: str):
@@ -60,11 +59,11 @@ class Party:
                         break
 
     def __repr__(self):
-        return f"Party: ({self.party_id}, {[_ for _ in self.members]}, {self.owner})"
+        return f"<Party: ({self.party_id}, {[_ for _ in self.members]}, {self.owner})>"
 
     def get_messages_since(self, last_id: int) -> List[Message]:
         from . import App, TableType
-        result = App.db.query(f"select * from {self.party_id}{TableType.MESSAGE_SUFFIX} where id > {last_id}")
+        result = App.db.query(f"select * from {self.party_id}{TableType.MESSAGE_SUFFIX} where id >= {last_id}")
         messages = []
         # log(result, LogLevel.EXT_DEBUG)
         for res in result:
@@ -78,6 +77,16 @@ class Party:
 
         # log(messages, LogLevel.EXT_DEBUG)
         return messages
+
+    def info(self):
+        return {
+            "id": self.party_id,
+            "name": self.name,
+            "image": self.image,
+            "memberCount": self.member_count,
+            "description": self.description,
+            "owner": self.owner
+        }
 
 r"""
   ⋀

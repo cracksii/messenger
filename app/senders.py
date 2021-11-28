@@ -9,5 +9,6 @@ class ClientHandlerId(enum.IntEnum):  # Messages send from the server to client 
     LOGIN = 1,
     MESSAGE_SEND = 2,
     LOAD_MESSAGES = 3,
-    GET_PROPERTY = 4
+    GET_PROPERTY = 4,
+    CLIENT_ID = 5
 

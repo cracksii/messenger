@@ -56,6 +56,7 @@ class LogInHandler(BaseRequestHandler):
                     App.clients.append(client)
                     log(f"Connected as client {client.client_id}", clr=colorama.Fore.GREEN, client=request.client)
                     request.client.send("1", ClientHandlerId.LOGIN)
+                    request.client.send(client.client_id, ClientHandlerId.CLIENT_ID)
                     return
                 else:
                     log(f"Key '{key}'({len(key)}) doesn't match key '{client.key}'({len(client.key)})", LogLevel.WARNING, request.client)
@@ -112,14 +113,27 @@ class PropertyGetHandler(BaseRequestHandler):
 
     @staticmethod
     def handle(request: Request):
-        log(request, LogLevel.DEBUG)
+        from . import App
         client = Client.from_network_client(request.client)
         if client:
-            prop = parse_json(request.data)
-            if "property" in prop:
-                prop = prop["property"]
-                log("Prop is " + prop, LogLevel.EXT_DEBUG)
-
+            props: dict = parse_json(request.data)
+            if "property" in props:
+                prop = props["property"]
+                if "data" in props:
+                    props.update(props["data"])
+                    props.pop("data")
+                log(props, LogLevel.EXT_DEBUG, client=client.network_client)
+                if prop == "parties":
+                    parties = [_.info() for _ in App.db.utility.get_all_parties(client.client_id)]
+                    request.client.send(json.dumps(parties), ClientHandlerId.GET_PROPERTY)
+                elif prop == "messages" and "partyId" in props:
+                    messages = [_.to_json() for _ in App.db.utility.get_party(props["partyId"]).get_messages_since(0)]
+                    request.client.send(json.dumps(messages), ClientHandlerId.GET_PROPERTY)
+                elif prop == "username" and "id" in props:
+                    username = App.db.utility.get_client(client_id=props["id"]).username
+                    request.client.send(username, ClientHandlerId.GET_PROPERTY)
+                else:
+                    request.client.send("0", ClientHandlerId.GET_PROPERTY)
         else:
             request.client.send("0", ClientHandlerId.GET_PROPERTY)
 

@@ -1,2 +1,2 @@
 # messenger
-A messenger application for ios and android, usung Python(Server) and react-native.
+A messenger application for ios and android, using Python server-side and react-native client-side.
